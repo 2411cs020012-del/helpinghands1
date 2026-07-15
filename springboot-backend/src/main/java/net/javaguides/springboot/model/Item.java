@@ -22,14 +22,16 @@ public class Item {
     @Column(name = "status")
     private String status;
 
-    public Item() {}
+    @Column(name = "contact_number")
+    private String contactNumber;
 
-    public Item(String title, String description, String category, String status) {
-        this.title = title;
-        this.description = description;
-        this.category = category;
-        this.status = status;
-    }
+    @Column(name = "location")
+    private String location;
+
+    @Column(name = "photo_url")
+    private String photoUrl;
+
+    public Item() {}
 
     public long getId() { return id; }
     public void setId(long id) { this.id = id; }
@@ -41,4 +43,10 @@ public class Item {
     public void setCategory(String category) { this.category = category; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public String getContactNumber() { return contactNumber; }
+    public void setContactNumber(String contactNumber) { this.contactNumber = contactNumber; }
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
+    public String getPhotoUrl() { return photoUrl; }
+    public void setPhotoUrl(String photoUrl) { this.photoUrl = photoUrl; }
 }

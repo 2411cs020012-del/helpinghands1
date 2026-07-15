@@ -172,3 +172,55 @@ body {
 .form-panel input::placeholder {
   color: #64748b;
 }
+
+.section-title {
+  margin-top: 40px;
+}
+
+.user-badge {
+  display: inline-block;
+  background: #1e293b;
+  color: #94a3b8;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-right: 8px;
+}
+
+.request-btn {
+  background: transparent;
+  border: 1px solid #4ade80;
+  color: #4ade80;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  margin-left: 8px;
+}
+
+.request-btn:hover {
+  background: rgba(74, 222, 128, 0.1);
+}
+
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.tab {
+  padding: 8px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #94a3b8;
+  font-size: 14px;
+  border: 1px solid #1e293b;
+}
+
+.tab.active {
+  background: #1e293b;
+  color: #4ade80;
+  border-color: #4ade80;
+}
+
+*, *::before, *::after { box-sizing: border-box; }

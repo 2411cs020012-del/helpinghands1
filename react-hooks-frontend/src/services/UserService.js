@@ -1,6 +1,6 @@
 import axios from "axios";
-const USER_BASE_REST_API_URL = "http://localhost:8080/api/v1/users";
-const API_ROOT = "http://localhost:8080/api/v1";
+const API_ROOT = "http://localhost:8081/api/v1";
+const USER_BASE_REST_API_URL = `${API_ROOT}/users`;
 
 function authHeaders() {
   const saved = localStorage.getItem("hh_user");
@@ -15,8 +15,8 @@ class UserService {
   createUser(user) {
     return axios.post(USER_BASE_REST_API_URL, user, { headers: authHeaders() });
   }
-  login(email) {
-    return axios.post(API_ROOT + "/login", { email });
+  login(credentials) {
+    return axios.post(API_ROOT + "/login", credentials);
   }
 }
 export default new UserService();

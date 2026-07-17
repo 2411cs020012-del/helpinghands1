@@ -8,9 +8,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS})
 @RestController
 @RequestMapping("/api/v1/")
 public class UserController {
@@ -31,17 +32,33 @@ public class UserController {
     public ResponseEntity<?> createUser(@RequestBody User user,
             @RequestHeader(value = "X-User-Role", required = false) String requesterRole) {
         if ("ADMIN".equals(user.getRole()) && !"ADMIN".equals(requesterRole)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only an existing admin can create another admin.");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Admin account creation is not allowed through public registration.");
         }
         return ResponseEntity.ok(userRepository.save(user));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody User loginRequest) {
-        Optional<User> found = userRepository.findByEmail(loginRequest.getEmail());
+    public ResponseEntity<?> login(@RequestBody Map<String, String> loginRequest) {
+        String email = loginRequest.get("email");
+        String password = loginRequest.get("password");
+
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest().body("Email is required.");
+        }
+        if (password == null) {
+            return ResponseEntity.badRequest().body("Password is required.");
+        }
+
+        List<User> found = userRepository.findByEmail(email);
         if (found.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No user found with that email. Register first.");
         }
-        return ResponseEntity.ok(found.get());
+
+        User user = found.get(0);
+        if (!password.equals(user.getPassword())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials.");
+        }
+
+        return ResponseEntity.ok(user);
     }
 }

@@ -202,7 +202,9 @@ class ListItemComponent extends Component {
       /* auth */
       loggedInUser: null,
       loginEmail: "",
+      loginPassword: "",
       loginError: "",
+      adminLoginMode: false,
       /* donation form */
       showDonateModal: false,
       title: "", description: "", category: "",
@@ -310,6 +312,19 @@ class ListItemComponent extends Component {
     });
   };
 
+  handlePhotoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      this.setState({ photoUrl: "" });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      this.setState({ photoUrl: reader.result });
+    };
+    reader.readAsDataURL(file);
+  };
+
   saveItem = (e) => {
     e.preventDefault();
     const item = {
@@ -333,8 +348,9 @@ class ListItemComponent extends Component {
         "Donation Live! 🎉",
         `"${item.title}" is now visible to people who need it. Thank you!`
       );
-    }).catch(() => {
-      this.addToast("error", "Failed", "Could not create the donation. Try again.");
+    }).catch((error) => {
+      const message = error?.response?.data || error?.message || "Could not create the donation. Try again.";
+      this.addToast("error", "Failed", String(message));
     });
   };
 
@@ -358,21 +374,28 @@ class ListItemComponent extends Component {
   };
 
   requestItemHandler = (item) => {
-    if (!this.state.loggedInUser) {
+    const user = this.state.loggedInUser;
+    if (!user) {
       this.addToast("info", "Login Required", "Please log in before requesting an item.");
       this.setState({ tab: "login" });
       return;
     }
+    if (user.role !== "RECIPIENT") {
+      this.addToast("error", "Unauthorized", "Only recipients can request items. Please sign in with a recipient account.");
+      return;
+    }
+
     RequestService.createRequest({
       itemId: item.id,
-      recipientId: this.state.loggedInUser.id,
+      recipientId: user.id,
       status: "PENDING",
     }).then(() => {
       ItemService.getAllItems().then(r => this.setState({ items: r.data }));
       RequestService.getAllRequests().then(r => this.setState({ requests: r.data }));
       this.addToast("success", "Request Sent! 📬", `Your request for "${item.title}" is pending donor approval.`);
-    }).catch(() => {
-      this.addToast("error", "Failed", "Could not send the request. You may have already requested this item.");
+    }).catch((error) => {
+      const message = error?.response?.data || error?.message || "Could not send the request. Try again.";
+      this.addToast("error", "Failed", String(message));
     });
   };
 
@@ -392,14 +415,40 @@ class ListItemComponent extends Component {
 
   loginHandler = (e) => {
     e.preventDefault();
-    const found = this.state.users.find(u => u.email === this.state.loginEmail);
-    if (!found) {
-      this.setState({ loginError: "No account found with that email. Register first." });
+    const email = this.state.loginEmail.trim();
+    if (!email) {
+      this.setState({ loginError: "Please enter your email." });
       return;
     }
-    localStorage.setItem("hh_user", JSON.stringify(found));
-    this.setState({ loggedInUser: found, loginError: "", loginEmail: "", tab: "items" });
-    this.addToast("success", `Welcome back, ${found.name.split(" ")[0]}! 👋`, `Logged in as ${found.role.toLowerCase()}.`);
+
+    const password = this.state.loginPassword.trim();
+    if (!password) {
+      this.setState({ loginError: "Password is required." });
+      return;
+    }
+
+    UserService.login({ email, password }).then((res) => {
+      const found = res.data;
+      const normalizedUser = { ...found, email: found.email || email };
+      localStorage.setItem("hh_user", JSON.stringify(normalizedUser));
+      this.setState((s) => ({
+        loggedInUser: normalizedUser,
+        loginError: "",
+        loginEmail: "",
+        loginPassword: "",
+        adminLoginMode: false,
+        tab: normalizedUser.role === "ADMIN" ? "admin" : "items",
+        users: s.users.some(u => u.email === normalizedUser.email) ? s.users : [...s.users, normalizedUser],
+      }));
+      this.addToast("success", `Welcome back, ${normalizedUser.name?.split(" ")[0] || "there"}! 👋`, `Logged in as ${normalizedUser.role?.toLowerCase() || "user"}.`);
+    }).catch((err) => {
+      const msg = err?.response?.status === 404
+        ? "No account found with that email. Register first."
+        : err?.response?.status === 401
+          ? "Invalid credentials. Check your email and password and try again."
+          : "Unable to sign in right now. Please try again.";
+      this.setState({ loginError: msg });
+    });
   };
 
   logoutHandler = () => {
@@ -524,13 +573,18 @@ class ListItemComponent extends Component {
                 <div className="hh-field-hint">{locationStatus}</div>
               )}
               <div className="hh-field">
-                <label className="hh-label">Photo URL <span style={{ color: "var(--txt-dim)", fontWeight: 400 }}>(optional)</span></label>
+                <label className="hh-label">Upload Image <span style={{ color: "var(--txt-dim)", fontWeight: 400 }}>(optional)</span></label>
                 <input
                   className="hh-input"
-                  placeholder="https://example.com/photo.jpg"
-                  value={photoUrl}
-                  onChange={e => this.setState({ photoUrl: e.target.value })}
+                  type="file"
+                  accept="image/*"
+                  onChange={this.handlePhotoUpload}
                 />
+                {photoUrl && (
+                  <div className="hh-field-hint" style={{ marginTop: 8 }}>
+                    ✅ Image selected and ready to upload
+                  </div>
+                )}
               </div>
               <div className="hh-modal-footer" style={{ padding: "16px 0 0" }}>
                 <button type="button" className="btn btn-ghost" onClick={this.closeDonateModal}>Cancel</button>
@@ -957,11 +1011,30 @@ class ListItemComponent extends Component {
                 required
               />
             </div>
+            <div className="hh-field">
+              <label className="hh-label">Password <span className="req">*</span></label>
+              <input
+                className="hh-input"
+                type="password"
+                placeholder="Enter your password"
+                value={this.state.loginPassword}
+                onChange={e => this.setState({ loginPassword: e.target.value, loginError: "" })}
+                required
+              />
+            </div>
             {loginError && (
               <div className="hh-error-msg">⚠️ {loginError}</div>
             )}
             <button type="submit" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
               Sign In →
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ width: "100%", marginTop: 12 }}
+              onClick={() => this.setState((s) => ({ adminLoginMode: !s.adminLoginMode, loginPassword: "", loginError: "" }))}
+            >
+              {this.state.adminLoginMode ? "Regular login" : "Admin login"}
             </button>
           </form>
           <div className="hh-divider" />
@@ -973,7 +1046,10 @@ class ListItemComponent extends Component {
             >
               Register in the Users tab
             </span>
-            . Pick <strong style={{ color: "var(--txt-secondary)" }}>ADMIN</strong> role to get admin access.
+            .
+          </p>
+          <p style={{ fontSize: 13, color: "var(--txt-muted)", textAlign: "center", lineHeight: 1.6, marginTop: 8 }}>
+            Admin login credentials: <strong>manoj@gmail.com</strong> / <strong>jam@8910</strong>
           </p>
         </div>
       </div>

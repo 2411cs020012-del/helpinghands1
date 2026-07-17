@@ -1,6 +1,12 @@
 import axios from "axios";
 
-const ITEM_BASE_REST_API_URL = "http://localhost:8080/api/v1/items";
+const ITEM_BASE_REST_API_URL = "http://localhost:8081/api/v1/items";
+
+function authHeaders() {
+  const saved = localStorage.getItem("hh_user");
+  const user = saved ? JSON.parse(saved) : null;
+  return user ? { "X-User-Role": user.role, "X-User-Id": user.id } : {};
+}
 
 class ItemService {
   getAllItems() {
@@ -8,7 +14,7 @@ class ItemService {
   }
 
   createItem(item) {
-    return axios.post(ITEM_BASE_REST_API_URL, item);
+    return axios.post(ITEM_BASE_REST_API_URL, item, { headers: authHeaders() });
   }
 
   getItemById(itemId) {

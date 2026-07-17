@@ -1,6 +1,7 @@
 package net.javaguides.springboot.model;
 
 import jakarta.persistence.*;
+import jakarta.persistence.Lob;
 
 @Entity
 @Table(name = "items")
@@ -28,7 +29,8 @@ public class Item {
     @Column(name = "location")
     private String location;
 
-    @Column(name = "photo_url")
+    @Lob
+    @Column(name = "photo_url", columnDefinition = "TEXT")
     private String photoUrl;
 
     public Item() {}

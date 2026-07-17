@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS})
 @RestController
 @RequestMapping("/api/v1/")
 public class RequestController {
@@ -28,9 +28,20 @@ public class RequestController {
 
     @PostMapping("/requests")
     public ResponseEntity<?> createRequest(@RequestBody Request request,
-            @RequestHeader(value = "X-User-Role", required = false) String role) {
+            @RequestHeader(value = "X-User-Role", required = false) String role,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
         if (role == null || !role.equals("RECIPIENT")) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only recipients can request items.");
+        }
+        if (userId == null || userId != request.getRecipientId()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Recipient identity mismatch.");
+        }
+        Item item = itemRepository.findById(request.getItemId()).orElse(null);
+        if (item == null) {
+            return ResponseEntity.badRequest().body("Item not found.");
+        }
+        if (!"AVAILABLE".equals(item.getStatus())) {
+            return ResponseEntity.badRequest().body("Item is not available for request.");
         }
         return ResponseEntity.ok(requestRepository.save(request));
     }

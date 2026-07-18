@@ -22,10 +22,21 @@ public class UserController {
     @GetMapping("/users")
     public List<User> getAllUsers(@RequestHeader(value = "X-User-Role", required = false) String role) {
         List<User> users = userRepository.findAll();
-        if (!"ADMIN".equals(role)) {
-            users.forEach(u -> u.setEmail("hidden"));
+        List<User> result = new java.util.ArrayList<>();
+        for (User u : users) {
+            User dto = new User();
+            dto.setId(u.getId());
+            dto.setName(u.getName());
+            dto.setRole(u.getRole());
+            if ("ADMIN".equals(role)) {
+                dto.setEmail(u.getEmail());
+            } else {
+                dto.setEmail("hidden");
+            }
+            dto.setPassword(null);
+            result.add(dto);
         }
-        return users;
+        return result;
     }
 
     @PostMapping("/users")

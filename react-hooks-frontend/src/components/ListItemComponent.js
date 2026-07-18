@@ -211,7 +211,7 @@ class ListItemComponent extends Component {
       contactNumber: "", photoUrl: "", location: "",
       locationStatus: "",
       /* register form */
-      userName: "", userEmail: "", userRole: "DONOR",
+      userName: "", userEmail: "", userPassword: "", userRole: "DONOR",
       /* search */
       searchQuery: "",
       filterCat: "ALL",
@@ -312,41 +312,39 @@ class ListItemComponent extends Component {
     });
   };
 
-  handlePhotoUpload = (e) => {
+handlePhotoUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) {
-      this.setState({ photoUrl: "" });
+      this.setState({ photoFile: null, photoUrl: "" });
       return;
     }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      this.setState({ photoUrl: reader.result });
-    };
-    reader.readAsDataURL(file);
+    this.setState({ photoFile: file, photoUrl: file.name });
   };
 
   saveItem = (e) => {
     e.preventDefault();
-    const item = {
-      title: this.state.title,
-      description: this.state.description,
-      category: this.state.category,
-      status: "AVAILABLE",
-      contactNumber: this.state.contactNumber,
-      location: this.state.location,
-      photoUrl: this.state.photoUrl,
-    };
-    ItemService.createItem(item).then((res) => {
+    const formData = new FormData();
+    formData.append("title", this.state.title);
+    formData.append("description", this.state.description);
+    formData.append("category", this.state.category);
+    formData.append("status", "AVAILABLE");
+    formData.append("contactNumber", this.state.contactNumber);
+    formData.append("location", this.state.location);
+    if (this.state.photoFile) {
+      formData.append("photo", this.state.photoFile);
+    }
+    const itemTitle = this.state.title;
+    ItemService.createItem(formData).then((res) => {
       this.setState(s => ({
         items: [res.data, ...s.items],
         showDonateModal: false,
         title: "", description: "", category: "",
-        contactNumber: "", photoUrl: "", location: "",
+        contactNumber: "", photoUrl: "", photoFile: null, location: "",
       }));
       this.addToast(
         "success",
         "Donation Live! 🎉",
-        `"${item.title}" is now visible to people who need it. Thank you!`
+        `"${itemTitle}" is now visible to people who need it. Thank you!`
       );
     }).catch((error) => {
       const message = error?.response?.data || error?.message || "Could not create the donation. Try again.";
@@ -359,13 +357,13 @@ class ListItemComponent extends Component {
     const user = {
       name: this.state.userName,
       email: this.state.userEmail,
-      password: "changeme123",
+      password: this.state.userPassword,
       role: this.state.userRole,
     };
     UserService.createUser(user).then((res) => {
       this.setState(s => ({
         users: [...s.users, res.data],
-        userName: "", userEmail: "",
+        userName: "", userEmail: "", userPassword: "",
       }));
       this.addToast("success", "Registered!", `${user.name} joined as ${user.role.toLowerCase()}.`);
     }).catch(() => {
@@ -677,7 +675,11 @@ class ListItemComponent extends Component {
       <div key={item.id} className="hh-item-card">
         <div className="hh-item-media">
           {item.photoUrl ? (
-            <img src={item.photoUrl} alt={item.title} onError={e => { e.target.style.display = "none"; }} />
+            <img
+              src={item.photoUrl.startsWith("http") ? item.photoUrl : `http://localhost:8081${item.photoUrl}`}
+              alt={item.title}
+              onError={e => { e.target.style.display = "none"; }}
+            />
           ) : (
             <div className="hh-item-media-placeholder">{emoji}</div>
           )}
@@ -795,16 +797,29 @@ class ListItemComponent extends Component {
                 />
               </div>
             </div>
-            <div className="hh-field" style={{ maxWidth: 240 }}>
-              <label className="hh-label">Role</label>
-              <select
-                className="hh-select"
-                value={userRole}
-                onChange={e => this.setState({ userRole: e.target.value })}
-              >
-                <option value="DONOR">🎁 Donor — I want to give</option>
-                <option value="RECIPIENT">🤲 Recipient — I need help</option>
-              </select>
+            <div className="hh-form-row">
+              <div className="hh-field">
+                <label className="hh-label">Password <span className="req">*</span></label>
+                <input
+                  className="hh-input"
+                  type="password"
+                  placeholder="Create a password"
+                  value={this.state.userPassword || ""}
+                  onChange={e => this.setState({ userPassword: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="hh-field">
+                <label className="hh-label">Role</label>
+                <select
+                  className="hh-select"
+                  value={userRole}
+                  onChange={e => this.setState({ userRole: e.target.value })}
+                >
+                  <option value="DONOR">🎁 Donor — I want to give</option>
+                  <option value="RECIPIENT">🤲 Recipient — I need help</option>
+                </select>
+              </div>
             </div>
             <div>
               <button type="submit" className="btn btn-primary">✓ Register Account</button>

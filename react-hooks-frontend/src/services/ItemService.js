@@ -13,8 +13,10 @@ class ItemService {
     return axios.get(ITEM_BASE_REST_API_URL);
   }
 
-  createItem(item) {
-    return axios.post(ITEM_BASE_REST_API_URL, item, { headers: authHeaders() });
+ createItem(formData) {
+    return axios.post(ITEM_BASE_REST_API_URL, formData, {
+      headers: { ...authHeaders(), "Content-Type": "multipart/form-data" },
+    });
   }
 
   getItemById(itemId) {
